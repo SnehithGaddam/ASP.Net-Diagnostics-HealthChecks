@@ -1,0 +1,131 @@
+version: '3'
+services:
+    sqlserver:
+        image: mcr.microsoft.com/mssql/server
+        restart: always
+        ports:
+            - ${SQLSERVER_PORT}:1433
+        environment:
+            - ACCEPT_EULA=Y
+            - SA_PASSWORD=${SQLSERVER_PASSWORD}
+    redis:
+        image: redis:alpine
+        ports:
+            - ${REDIS_PORT}:6379
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.3.2
+        ports:
+          - "9300:9300"
+          - ${ELASTICSEARCH_PORT}:9200
+    postgres:
+        image: postgres
+        environment:
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        ports:
+            - ${POSTGRES_PORT}:5432
+    eventstore: 
+        image: eventstore/eventstore
+        ports: 
+          - "2113:2113"
+          - ${EVENTSTORE_PORT}:1113
+    mongodb:
+        image: mongo
+        ports:
+            - ${MONGODB_PORT}:27017
+    mysql:
+        image: mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+        ports:
+            - ${MYSQL_PORT}:3306
+    zookeeper:
+        image: confluent/zookeeper
+        ports:
+            - ${ZOOKEEPER_PORT}:2181
+    raven:
+        image: ravendb/ravendb
+        ports:
+            - ${RAVENDB_PORT}:8080
+        environment:
+            - RAVEN_ARGS=--Setup.Mode=None
+    kafka:
+        image: confluent/kafka
+        environment:
+            - KAFKA_ADVERTISED_HOST_NAME=localhost
+            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+            - KAFKA_ADVERTISED_PORT=9092
+        ports:
+          - ${KAFKA_PORT}:9092
+        links: 
+          - zookeeper
+    rabbitmq:
+        image: rabbitmq
+        ports:
+          - ${RABBITMQ_PORT}:5672
+    idsvr:
+        image: nakah/identityserver4
+        ports:
+          - ${IDSVR_PORT}:80
+    oracle:
+# Build image from src, pending legal issues with binary distribution https://github.com/wnameless/docker-oracle-xe-11g/issues/118
+        build:
+          context: https://github.com/wnameless/docker-oracle-xe-11g.git
+        ports: 
+            - ${ORACLE_PORT}:1521
+        environment:
+            - ORACLE_ALLOW_REMOTE=true
+    ftp:
+        image: bogem/ftp
+        ports:
+            - ${FTP_PORT}:21
+            - 47400-47470:47400-47470
+        environment:
+            - FTP_USER=${FTP_USER}
+            - FTP_PASS=${FTP_PASS}
+            - PASV_ADDRESS=127.0.0.1
+    sftp:
+        image: atmoz/sftp
+        ports: 
+            - ${SFTP_PORT}:22
+        volumes:
+            - ./build/docker-services/certificate/id_rsa.pub:/home/foo/.ssh/keys/id_rsa.pub:ro
+        command: foo:pass:::upload
+    mail:
+        image: tvial/docker-mailserver:latest
+        hostname: mail
+        container_name: mail
+        domainname: healthchecks.com        
+        ports:
+            - 25:25               
+            - 143:143
+            - 465:465
+            - 587:587
+            - 993:993          
+            - 995:995  
+        environment:
+            - SSL_TYPE=self-signed
+            - DMS_DEBUG=1
+        volumes:
+            - ./build/docker-services/mail/:/tmp/docker-mailserver/
+    localstack:
+        image: localstack/localstack
+        ports:
+        - "4567-4584:4567-4584"
+        - "${PORT_WEB_UI-8080}:${PORT_WEB_UI-8080}"
+        environment:
+        - SERVICES=${SERVICES- }
+        - DEBUG=${DEBUG- }
+        - DATA_DIR=${DATA_DIR- }
+        - PORT_WEB_UI=${PORT_WEB_UI- }
+        - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR- }
+        - KINESIS_ERROR_PROBABILITY=${KINESIS_ERROR_PROBABILITY- }
+        - DOCKER_HOST=unix:///var/run/docker.sock
+        volumes:
+        - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
+        - "/var/run/docker.sock:/var/run/docker.sock"   
+    consul:
+        image: consul:latest
+        ports:
+          - "8500:8500"
+          - "8600:8600"   
